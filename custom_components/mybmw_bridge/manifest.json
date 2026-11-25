@@ -1,6 +1,7 @@
 {
   "domain": "mybmw_bridge",
   "name": "bmw-linker-ha",
+  "categories": ["vehicles_transport.cars_evs"],
   "codeowners": ["@rayyume"],
   "config_flow": true,
   "dependencies": ["webhook"],

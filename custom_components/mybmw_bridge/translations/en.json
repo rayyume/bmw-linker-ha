@@ -1,0 +1,30 @@
+{
+  "config": {
+    "step": {
+      "user": {
+        "title": "Add a vehicle",
+        "description": "Append this secret path to your local Home Assistant address and paste the resulting URL into the Scriptable bridge.\n\n`{webhook_path}`",
+        "data": {"name": "Vehicle name"}
+      },
+      "reconfigure": {
+        "title": "Scriptable webhook",
+        "description": "Your existing secret webhook path.\n\n`{webhook_path}`"
+      }
+    },
+    "error": {"invalid_name": "Enter a vehicle name between 1 and 64 characters."}
+  },
+  "entity": {
+    "sensor": {
+      "battery_percent": {"name": "Battery"},
+      "fuel_percent": {"name": "Fuel level"},
+      "fuel_range_km": {"name": "Fuel range reported by BMW"},
+      "electric_range_km": {"name": "Electric range"},
+      "odometer_km": {"name": "Odometer"},
+      "reported_at": {"name": "Vehicle last reported"}
+    },
+    "binary_sensor": {
+      "door_security": {"name": "Door lock status"},
+      "stale_report": {"name": "Vehicle data stale"}
+    }
+  }
+}

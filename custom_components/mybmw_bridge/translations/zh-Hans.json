@@ -1,0 +1,30 @@
+{
+  "config": {
+    "step": {
+      "user": {
+        "title": "添加车辆",
+        "description": "把以下私密路径接到 Home Assistant 的局域网地址后面，再将完整 URL 填入 Scriptable 桥接代码。\n\n`{webhook_path}`",
+        "data": {"name": "车辆名称"}
+      },
+      "reconfigure": {
+        "title": "Scriptable Webhook",
+        "description": "当前的私密 Webhook 路径。\n\n`{webhook_path}`"
+      }
+    },
+    "error": {"invalid_name": "车辆名称须为 1 到 64 个字符。"}
+  },
+  "entity": {
+    "sensor": {
+      "battery_percent": {"name": "电量"},
+      "fuel_percent": {"name": "油量"},
+      "fuel_range_km": {"name": "宝马报告的燃油续航"},
+      "electric_range_km": {"name": "纯电续航"},
+      "odometer_km": {"name": "总里程"},
+      "reported_at": {"name": "车辆最后上报时间"}
+    },
+    "binary_sensor": {
+      "door_security": {"name": "车锁状态"},
+      "stale_report": {"name": "车辆数据已过期"}
+    }
+  }
+}

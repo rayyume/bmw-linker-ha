@@ -73,6 +73,7 @@ def project_vehicle(vehicle: dict, state: dict, trips: dict) -> Telemetry:
     location = _get(state, "location")
     coordinates = _get(location, "coordinates")
     report = _get(trips, "widget")
+    display = _get(vehicle, "scriptableDisplay")
     last_trip = _get(report, "lastTrip")
     monthly = _get(report, "monthly")
     battery_target = number(_get(electric, "chargingTarget"), maximum=100)
@@ -105,6 +106,9 @@ def project_vehicle(vehicle: dict, state: dict, trips: dict) -> Telemetry:
         "model": _text(_get(vehicle, "model")),
         "vin": _text(_get(vehicle, "vin")),
         "license_plate": _text(_get(vehicle, "licensePlate")),
+        "display_name": _text(_get(display, "name")),
+        "display_plate": _text(_get(display, "licensePlate")),
+        "fuel_tank_liters": number(_get(display, "fuelTankLiters"), 1, 250),
         "check_control_count": len(messages) if isinstance(messages, list) else None,
         "last_trip_fuel_consumption": number(_get(last_trip, "fuelConsumption", "averageConsumption")),
         "last_trip_electric_consumption": number(_get(last_trip, "electricConsumption", "averageConsumption")),

@@ -63,9 +63,24 @@
   }
 
   const webhookKey = "bmw-linker-ha.webhook-url." + Script.name();
+  const photoKey = "bmw-linker-ha.photo-receipt." + Script.name();
   const menuName = "bmwLinkerHaWebhook";
+  const maxPhotoBase64Length = 1398104; // Base64 length of the HA endpoint's 1 MiB limit.
   const readWebhook = () => Keychain.contains(webhookKey) ? Keychain.get(webhookKey) : "";
   const webhookStatus = () => readWebhook() ? "已设置" : "未设置";
+
+  function resizePhoto(image, maxDimension) {
+    const { width, height } = image.size;
+    const scale = Math.min(1, maxDimension / Math.max(width, height));
+    const targetWidth = Math.max(1, Math.round(width * scale));
+    const targetHeight = Math.max(1, Math.round(height * scale));
+    const canvas = new DrawContext();
+    canvas.size = new Size(targetWidth, targetHeight);
+    canvas.opaque = false;
+    canvas.respectScreenScale = false;
+    canvas.drawImageInRect(image, new Rect(0, 0, targetWidth, targetHeight));
+    return Data.fromPNG(canvas.getImage());
+  }
 
   Widget = class extends Widget {
     async getAppViewOptions() {
@@ -113,7 +128,15 @@
         const url = readWebhook();
         if (url) {
           const trip = this.myBmwHaTrip;
-          await pushVehicleState(data, trip?.vin === data.vin ? trip?.report : undefined, url);
+          const display = {};
+          try {
+            display.name = this.custom_name?.() || undefined;
+            display.licensePlate = this.licensePlate?.() || undefined;
+            display.fuelTankLiters = this.totalFuelLiters?.() || undefined;
+          } catch {
+            // Some versions have different widget preferences.
+          }
+          await pushVehicleState({ ...data, scriptableDisplay: display }, trip?.vin === data.vin ? trip?.report : undefined, url);
         }
       }
       return data;
@@ -133,6 +156,44 @@
         }
       }
       return result;
+    }
+
+    async getVehicleImage(vehicle) {
+      const image = await super.getVehicleImage(vehicle);
+      const vin = vehicle?.vin;
+      const url = readWebhook();
+      if (!image?.size || typeof vin !== "string" || vehicle.black || !isHaWebhookUrl(url)) return image;
+
+      try {
+        let photo = resizePhoto(image, 820);
+        let encoded = photo.toBase64String();
+        if (encoded.length > maxPhotoBase64Length) {
+          photo = resizePhoto(image, 500);
+          encoded = photo.toBase64String();
+        }
+        if (encoded.length > maxPhotoBase64Length) return image;
+
+        const signature = this.md5(url + "\n" + vin + "\n" + encoded);
+        const [previousSignature, sentAt] = (Keychain.contains(photoKey) ? Keychain.get(photoKey) : "").split("|");
+        if (signature === previousSignature && Date.now() - Number(sentAt) < 86400000) return image;
+
+        const request = new Request(url);
+        request.method = "POST";
+        request.headers = { "Content-Type": "image/png", "X-BMW-VIN": vin };
+        request.timeoutInterval = 4;
+        request.onRedirect = () => null;
+        request.body = photo;
+        const receipt = await request.loadJSON();
+        if (request.response.statusCode === 200 &&
+            ["photo_updated", "photo_unchanged"].includes(receipt?.mybmw_bridge)) {
+          Keychain.set(photoKey, signature + "|" + Date.now());
+        } else {
+          console.log("[My BMW HA] 车型图尚未被 HA 接收，后续预览时会重试。");
+        }
+      } catch {
+        console.log("[My BMW HA] 车型图同步未完成，后续预览时会重试。");
+      }
+      return image;
     }
   };
 }

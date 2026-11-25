@@ -4,22 +4,27 @@ import asyncio
 from datetime import UTC, datetime
 import json
 import logging
+from pathlib import Path
 
 from aiohttp import web
 
-from homeassistant.components import webhook
+from homeassistant.components import frontend, webhook
+from homeassistant.components.http import StaticPathConfig
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.const import Platform
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers.storage import Store
+from homeassistant.helpers.typing import ConfigType
 from homeassistant.helpers.update_coordinator import DataUpdateCoordinator
 
 from .const import CONF_PUBLIC_URL, CONF_WEBHOOK_ID, DOMAIN
+from .photo import MAX_PHOTO_BYTES, VehiclePhoto
 from .snapshot import VehicleSnapshot
 
 _LOGGER = logging.getLogger(__name__)
-_PLATFORMS = (Platform.SENSOR, Platform.BINARY_SENSOR, Platform.DEVICE_TRACKER)
+_PLATFORMS = (Platform.SENSOR, Platform.BINARY_SENSOR, Platform.DEVICE_TRACKER, Platform.IMAGE)
 _MAX_BODY_BYTES = 64 * 1024
+_CARD_URL = f"/api/{DOMAIN}/bmw-linker-ha-card.js"
 
 
 class VehicleCoordinator(DataUpdateCoordinator[VehicleSnapshot]):
@@ -30,11 +35,20 @@ class VehicleCoordinator(DataUpdateCoordinator[VehicleSnapshot]):
         self.store: Store[dict] = Store(
             hass, 1, f"{DOMAIN}.{entry.entry_id}", private=True, atomic_writes=True
         )
+        self.photo_store: Store[dict] = Store(
+            hass, 1, f"{DOMAIN}.{entry.entry_id}.photo", private=True, atomic_writes=True
+        )
+        self.photo: VehiclePhoto | None = None
         self.lock = asyncio.Lock()
         self.accepting_updates = True
         self.require_https = bool(entry.data.get(CONF_PUBLIC_URL))
 
     async def async_restore(self) -> None:
+        if (stored_photo := await self.photo_store.async_load()) is not None:
+            try:
+                self.photo = VehiclePhoto.from_storage(stored_photo)
+            except (KeyError, TypeError, ValueError):
+                _LOGGER.warning("Ignoring invalid stored BMW vehicle image")
         if (payload := await self.store.async_load()) is None:
             return
         try:
@@ -49,15 +63,19 @@ class VehicleCoordinator(DataUpdateCoordinator[VehicleSnapshot]):
     ) -> web.Response:
         if self.require_https and not getattr(request, "secure", False):
             return web.json_response({"error": "https_required"}, status=403)
+        photo_upload = request.content_type == "image/png"
+        limit = MAX_PHOTO_BYTES if photo_upload else _MAX_BODY_BYTES
         body = bytearray()
         stream = request.content
-        while len(body) <= _MAX_BODY_BYTES:
-            chunk = await stream.read(_MAX_BODY_BYTES + 1 - len(body))
+        while len(body) <= limit:
+            chunk = await stream.read(limit + 1 - len(body))
             if not chunk:
                 break
             body.extend(chunk)
-        if len(body) > _MAX_BODY_BYTES:
+        if len(body) > limit:
             return web.json_response({"error": "payload_too_large"}, status=413)
+        if photo_upload:
+            return await self.async_store_photo(request.headers.get("X-BMW-VIN", ""), bytes(body))
         try:
             payload = json.loads(body)
         except (ValueError, RecursionError):
@@ -82,8 +100,44 @@ class VehicleCoordinator(DataUpdateCoordinator[VehicleSnapshot]):
             self.async_set_updated_data(snapshot)
         return web.json_response({"mybmw_bridge": "updated"})
 
+    @property
+    def vehicle_photo(self) -> VehiclePhoto | None:
+        vin = self.data.values.get("vin") if self.data else None
+        if self.photo and isinstance(vin, str) and self.photo.vin == vin.upper():
+            return self.photo
+        return None
+
+    async def async_store_photo(self, vin: str, data: bytes) -> web.Response:
+        try:
+            photo = VehiclePhoto.from_png(vin.upper(), data, datetime.now(UTC))
+        except ValueError as err:
+            return web.json_response({"error": str(err)}, status=400)
+
+        async with self.lock:
+            if not self.accepting_updates:
+                return web.json_response({"error": "bridge_unloading"}, status=503)
+            snapshot = self.data
+            if snapshot is None:
+                return web.json_response({"error": "vehicle_mismatch"}, status=409)
+            current_vin = snapshot.values.get("vin")
+            if not isinstance(current_vin, str) or current_vin.upper() != photo.vin:
+                return web.json_response({"error": "vehicle_mismatch"}, status=409)
+            if self.photo and self.photo.vin == photo.vin and self.photo.data == data:
+                return web.json_response({"mybmw_bridge": "photo_unchanged"})
+            await self.photo_store.async_save(photo.as_storage_data())
+            self.photo = photo
+            self.async_set_updated_data(snapshot)
+        return web.json_response({"mybmw_bridge": "photo_updated"})
+
 
 type MyBmwBridgeConfigEntry = ConfigEntry[VehicleCoordinator]
+
+
+async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:
+    card = Path(__file__).with_name("bmw-linker-ha-card.js")
+    await hass.http.async_register_static_paths([StaticPathConfig(_CARD_URL, str(card), False)])
+    frontend.add_extra_js_url(hass, f"{_CARD_URL}?v=0.4.0")
+    return True
 
 
 async def async_setup_entry(hass: HomeAssistant, entry: MyBmwBridgeConfigEntry) -> bool:
@@ -117,3 +171,4 @@ async def async_unload_entry(hass: HomeAssistant, entry: MyBmwBridgeConfigEntry)
 
 async def async_remove_entry(hass: HomeAssistant, entry: MyBmwBridgeConfigEntry) -> None:
     await Store(hass, 1, f"{DOMAIN}.{entry.entry_id}", private=True).async_remove()
+    await Store(hass, 1, f"{DOMAIN}.{entry.entry_id}.photo", private=True).async_remove()

@@ -92,6 +92,9 @@
     },
     "device_tracker": {
       "position": {"name": "车辆位置"}
+    },
+    "image": {
+      "vehicle_photo": {"name": "车型图"}
     }
   }
 }

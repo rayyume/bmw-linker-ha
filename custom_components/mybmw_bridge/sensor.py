@@ -136,7 +136,7 @@ class VehicleDetails(BridgeEntity, SensorEntity):
     _attr_translation_key = "vehicle_details"
     _attr_device_class = SensorDeviceClass.TIMESTAMP
     _attr_entity_category = EntityCategory.DIAGNOSTIC
-    _unrecorded_attributes = frozenset({"vehicle", "vehicle_state", "trips"})
+    _unrecorded_attributes = frozenset({"vehicle", "vehicle_state", "trips", "telemetry"})
 
     def __init__(self, entry: MyBmwBridgeConfigEntry) -> None:
         super().__init__(entry, "vehicle_details")
@@ -144,11 +144,17 @@ class VehicleDetails(BridgeEntity, SensorEntity):
     @property
     def native_value(self) -> datetime | None:
         snapshot = self.coordinator.data
-        return snapshot.reported_at if snapshot and snapshot.version == 2 else None
+        return snapshot.reported_at if snapshot else None
 
     @property
-    def extra_state_attributes(self) -> dict | None:
+    def extra_state_attributes(self) -> dict:
         snapshot = self.coordinator.data
-        if snapshot and snapshot.version == 2:
-            return {"vehicle": snapshot.vehicle, "vehicle_state": snapshot.state, "trips": snapshot.trips}
-        return None
+        if snapshot is None:
+            return {"bmw_linker_vehicle": True}
+        return {
+            "bmw_linker_vehicle": True,
+            "vehicle": snapshot.vehicle,
+            "vehicle_state": snapshot.state,
+            "trips": snapshot.trips,
+            "telemetry": snapshot.values,
+        }

@@ -2,7 +2,7 @@
 const HA_WEBHOOK_URL = "PASTE_YOUR_LOCAL_HOME_ASSISTANT_WEBHOOK_URL_HERE";
 
 module.exports.pushVehicleState = async (snapshot) => {
-  if (!/^https?:\/\/[^\s/?#]+\/api\/webhook\/[a-f0-9]{64}$/.test(HA_WEBHOOK_URL)) {
+  if (!isHaWebhookUrl(HA_WEBHOOK_URL)) {
     console.log("[My BMW HA] 请填写集成显示的完整 Webhook URL。");
     return;
   }
@@ -55,6 +55,10 @@ module.exports.pushVehicleState = async (snapshot) => {
     console.log("[My BMW HA] 未收到确认，请检查网络、Webhook 地址和车辆数据。");
   }
 };
+
+function isHaWebhookUrl(value) {
+  return /^https?:\/\/[^\s/?#@\\]+\/api\/webhook\/[a-f0-9]{64}$/.test(value);
+}
 
 function nonnegativeNumber(value) {
   if (typeof value === "string" && value.trim() !== "") value = Number(value);

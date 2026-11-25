@@ -19,7 +19,7 @@
 
 地址字段只填协议、主机和可选端口。Webhook 路径由集成生成，请像密码一样保管完整 URL。公网模式只接收 HTTPS POST，局域网模式支持 HTTP 或 HTTPS POST。
 
-## Scriptable 单脚本方式
+## 安装 Scriptable 桥接
 
 把发送功能加到你已登录的 BMW 脚本。安装器保留所选脚本的名称和原有小组件绑定。
 
@@ -32,34 +32,10 @@
 
 **多辆车**使用不同的 Scriptable 脚本名，例如 `bmw-linker-i4` 和 `宝马 X5`。在 HA 里分别添加两辆车的集成条目，并在两个脚本中分别填写对应的 Webhook。地址按脚本名保存在 Scriptable 钥匙串里。
 
-<details>
-<summary>手动安装和排查</summary>
-
-如果脚本经过其他改动，安装器会保留原文件并提示。手动接入时，移除旧桥接块，再把 [bmw-linker-ha-inline.js](bmw-linker-ha-inline.js) 粘贴到 `await new Widget(Script.name(), {` 的上一行。保存并运行后，可从菜单填入 Webhook。
-
-</details>
-
-## Scriptable 独立发送模块方式
-
-1. 在 iPhone 下载 [bmw-linker-ha-bridge.scriptable](https://github.com/rayyume/bmw-linker-ha/releases/latest/download/bmw-linker-ha-bridge.scriptable)，从“文件”用 Scriptable 打开或分享导入。也可以新建名为 `bmw-linker-ha-bridge` 的脚本，再粘贴 [bmw-linker-ha-bridge.js](bmw-linker-ha-bridge.js) 的内容。打开脚本，把 `HA_WEBHOOK_URL` 的占位值替换成 HA 显示的完整 URL。
-2. 打开已经能显示车辆的 `bmw-linker`。在 `render` 方法里找到 `let data = await this.getData();`，在该行**下面**插入以下调用。
-
-   ```js
-   if (data?.properties && !data.black) {
-     try {
-       await importModule("bmw-linker-ha-bridge").pushVehicleState(data.properties);
-     } catch {
-       console.log("[My BMW HA] 无法调用发送脚本，请检查脚本名称。");
-     }
-   }
-   ```
-
-3. 运行 `bmw-linker` 并打开车辆小组件预览。Scriptable 控制台出现“已更新车辆状态”后，打开 HA 中的 BMW 设备查看实体。使用局域网地址时，若 iOS 提示局域网访问，请允许 Scriptable 访问。
-
-发送脚本由 `bmw-linker` 在拿到车况后调用。此前若已安装内嵌桥接代码或调用过旧的 `scriptable-bridge`，切换时替换旧代码块，避免一次刷新上报两次。
+如果原脚本入口有改动，安装器会提示不匹配并保留原文件。预览时，Scriptable 控制台显示「已更新车辆状态」说明 HA 已接收数据。使用局域网地址时，若 iOS 提示局域网访问，请允许 Scriptable 访问。
 
 使用 iPhone 信任的 HTTPS 证书，并填写访问 HA 的最终地址。发送脚本遇到重定向会停止请求。
 
 HA 保留最后一次有效上报，重启后恢复。重复或较早的上报不会覆盖已有数据。“车辆数据已过期”在车辆上报时间超过 24 小时后开启，最后已知的数值仍可查看。iOS 的小组件刷新由系统调度。手动跑一次脚本也可能读到 BMW 端的缓存，判断数据是否更新请看“车辆最后上报时间”。
 
-参考 [HACS 自定义仓库](https://www.hacs.xyz/docs/faq/custom_repositories/)、[Home Assistant Marketplace](https://www.home-assistant.io/integrations/marketplace/#custom-repositories)、[Home Assistant Webhook](https://www.home-assistant.io/triggers/webhook/) 和 [Scriptable importModule](https://scriptable.app/docs/reference/importmodule/)。
+参考 [HACS 自定义仓库](https://www.hacs.xyz/docs/faq/custom_repositories/)、[Home Assistant Marketplace](https://www.home-assistant.io/integrations/marketplace/#custom-repositories) 和 [Home Assistant Webhook](https://www.home-assistant.io/triggers/webhook/)。

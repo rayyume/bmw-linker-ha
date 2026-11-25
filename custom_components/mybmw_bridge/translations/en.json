@@ -3,15 +3,37 @@
     "step": {
       "user": {
         "title": "Add a vehicle",
-        "description": "Append this secret path to your local Home Assistant address and paste the resulting URL into the Scriptable bridge.\n\n`{webhook_path}`",
-        "data": {"name": "Vehicle name"}
+        "description": "Enter a public HTTPS address if you want to send data away from home. Leave it blank for local access.",
+        "data": {
+          "public_url": "Public HTTPS address (optional)",
+          "local_url": "Local address (optional)",
+          "name": "Vehicle name"
+        },
+        "data_description": {
+          "public_url": "Example: https://ha.example.com",
+          "local_url": "Example: http://homeassistant.local:8123. Leave blank to use Home Assistant's internal URL."
+        }
       },
       "reconfigure": {
         "title": "Scriptable webhook",
-        "description": "Your existing secret webhook path.\n\n`{webhook_path}`"
+        "description": "Change the address used by Scriptable. The existing webhook ID is retained.",
+        "data": {
+          "public_url": "Public HTTPS address (optional)",
+          "local_url": "Local address (optional)"
+        }
+      },
+      "pair": {
+        "title": "Copy your webhook URL",
+        "description": "Copy this private URL to the Scriptable bridge and submit the form.\n\n`{webhook_url}`"
       }
     },
-    "error": {"invalid_name": "Enter a vehicle name between 1 and 64 characters."}
+    "error": {
+      "invalid_name": "Enter a vehicle name between 1 and 64 characters.",
+      "invalid_public_url": "Enter a public HTTPS address without a path.",
+      "invalid_local_url": "Enter a local HTTP or HTTPS address without a path.",
+      "missing_local_url": "Home Assistant could not find an internal address. Enter the address you use on your local network."
+    },
+    "abort": {"pairing_not_started": "Open the integration setup and enter a webhook address first."}
   },
   "entity": {
     "sensor": {

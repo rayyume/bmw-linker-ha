@@ -14,7 +14,7 @@ from homeassistant.core import HomeAssistant
 from homeassistant.helpers.storage import Store
 from homeassistant.helpers.update_coordinator import DataUpdateCoordinator
 
-from .const import CONF_WEBHOOK_ID, DOMAIN
+from .const import CONF_PUBLIC_URL, CONF_WEBHOOK_ID, DOMAIN
 from .snapshot import VehicleSnapshot
 
 _LOGGER = logging.getLogger(__name__)
@@ -32,6 +32,7 @@ class VehicleCoordinator(DataUpdateCoordinator[VehicleSnapshot]):
         )
         self.lock = asyncio.Lock()
         self.accepting_updates = True
+        self.require_https = bool(entry.data.get(CONF_PUBLIC_URL))
 
     async def async_restore(self) -> None:
         if (payload := await self.store.async_load()) is None:
@@ -46,6 +47,8 @@ class VehicleCoordinator(DataUpdateCoordinator[VehicleSnapshot]):
     async def async_webhook(
         self, hass: HomeAssistant, webhook_id: str, request: web.Request
     ) -> web.Response:
+        if self.require_https and not getattr(request, "secure", False):
+            return web.json_response({"error": "https_required"}, status=403)
         body = bytearray()
         stream = request.content
         while len(body) <= _MAX_BODY_BYTES:
@@ -90,7 +93,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: MyBmwBridgeConfigEntry) 
         entry.title,
         webhook_id,
         coordinator.async_webhook,
-        local_only=True,
+        local_only=not coordinator.require_https,
         allowed_methods=("POST",),
     )
     return True

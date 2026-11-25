@@ -3,15 +3,37 @@
     "step": {
       "user": {
         "title": "添加车辆",
-        "description": "把以下私密路径接到 Home Assistant 的局域网地址后面，再将完整 URL 填入 Scriptable 桥接代码。\n\n`{webhook_path}`",
-        "data": {"name": "车辆名称"}
+        "description": "想在外网推送车况时，填写公网 HTTPS 地址。留空时使用局域网。",
+        "data": {
+          "public_url": "公网 HTTPS 地址（选填）",
+          "local_url": "局域网地址（选填）",
+          "name": "车辆名称"
+        },
+        "data_description": {
+          "public_url": "例如 https://ha.example.com",
+          "local_url": "例如 http://homeassistant.local:8123。留空时尝试使用 Home Assistant 的内部地址。"
+        }
       },
       "reconfigure": {
         "title": "Scriptable Webhook",
-        "description": "当前的私密 Webhook 路径。\n\n`{webhook_path}`"
+        "description": "可以更新 Scriptable 使用的地址，现有 Webhook ID 会保留。",
+        "data": {
+          "public_url": "公网 HTTPS 地址（选填）",
+          "local_url": "局域网地址（选填）"
+        }
+      },
+      "pair": {
+        "title": "复制 Webhook 地址",
+        "description": "复制此私密地址到 Scriptable 发送脚本，然后提交。\n\n`{webhook_url}`"
       }
     },
-    "error": {"invalid_name": "车辆名称须为 1 到 64 个字符。"}
+    "error": {
+      "invalid_name": "车辆名称须为 1 到 64 个字符。",
+      "invalid_public_url": "请输入仅包含域名或 IP 及可选端口的公网 HTTPS 地址。",
+      "invalid_local_url": "请输入仅包含主机名或 IP 及可选端口的局域网 HTTP 或 HTTPS 地址。",
+      "missing_local_url": "Home Assistant 未能找到内部地址，请填写手机在局域网中访问的地址。"
+    },
+    "abort": {"pairing_not_started": "请打开集成配置并先设置 Webhook 地址。"}
   },
   "entity": {
     "sensor": {

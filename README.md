@@ -23,17 +23,19 @@
 
 把发送功能加到你已登录的 `bmw-linker`。保留脚本名和原有小组件绑定，以后只需运行这一份脚本。
 
-1. 如果曾在 `let data = await this.getData();` 下方加入旧的内嵌桥接块或 `importModule(...).pushVehicleState(...)` 调用，先移除那段桥接代码，保留原来的取数语句。
-2. 在 `bmw-linker` 底部找到下面这一行。复制 [bmw-linker-ha-inline.js](bmw-linker-ha-inline.js) 的全部内容，粘贴到这行的**上方**，保留原来的启动语句。
-
-   ```js
-   await new Widget(Script.name(), {
-   ```
-
-3. 保存并运行 `bmw-linker`。在原菜单中点 **Home Assistant Webhook**，粘贴 HA 集成显示的完整 URL，再点 **保存**。菜单会显示「已设置」。以后从同一入口修改地址，清空后保存即可停用推送。
-4. 预览车辆小组件。确认 HA 收到数据后，可以移除旧的独立发送脚本。
+1. 用 iPhone 下载 [bmw-linker-ha-setup.scriptable](https://github.com/rayyume/bmw-linker-ha/releases/download/v0.2.1/bmw-linker-ha-setup.scriptable)，分享至 Scriptable 导入。
+2. 运行一次 **bmw-linker-ha-setup**。安装器在手机上备份并更新已有的 `bmw-linker`，支持未改动的原脚本和按说明接入过独立发送模块的脚本。
+3. 返回并运行 **bmw-linker**。在原菜单中点 **Home Assistant Webhook**，粘贴 HA 集成显示的完整 URL，再点**保存**。菜单会显示「已设置」。以后从同一入口修改地址，清空后保存即可停用推送。
+4. 预览车辆小组件。确认 HA 收到数据后，可以删除安装器和旧的独立发送脚本。
 
 Webhook 保存在 Scriptable 的钥匙串里，源代码和菜单列表均只保留配置逻辑或设置状态。HA 集成和原有 Webhook URL 可以继续使用。
+
+<details>
+<summary>手动安装和排查</summary>
+
+如果脚本经过其他改动，安装器会保留原文件并提示。手动接入时，移除旧桥接块，再把 [bmw-linker-ha-inline.js](bmw-linker-ha-inline.js) 粘贴到 `await new Widget(Script.name(), {` 的上一行。保存并运行后，可从菜单填入 Webhook。
+
+</details>
 
 ## Scriptable 独立发送模块方式
 

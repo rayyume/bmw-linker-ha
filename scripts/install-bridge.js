@@ -1,33 +1,92 @@
 const bridgeCode = /* generated bridge */ null;
-const startup = "await new Widget(Script.name(), {";
 const configuredMenu = 'const menuName = "bmwLinkerHaWebhook";';
 
-function findOriginalScript() {
+function scriptFolders() {
   const local = FileManager.local();
-  const fileName = "bmw-linker.js";
-  const sibling = module.filename.replace(/[^/]+$/, fileName);
-  if (sibling !== module.filename && local.fileExists(sibling)) {
-    const manager = local.isFileStoredIniCloud(sibling) ? FileManager.iCloud() : local;
-    return { manager, path: sibling };
-  }
-
-  const candidates = [{ manager: local, path: local.joinPath(local.documentsDirectory(), fileName) }];
+  const folders = [{ manager: local, path: local.documentsDirectory() }];
+  let cloud;
   try {
-    const cloud = FileManager.iCloud();
-    const path = cloud.joinPath(cloud.documentsDirectory(), fileName);
-    if (path !== candidates[0].path) candidates.push({ manager: cloud, path });
+    cloud = FileManager.iCloud();
+    const cloudPath = cloud.documentsDirectory();
+    if (cloudPath) folders.push({ manager: cloud, path: cloudPath });
   } catch {
     // The device may have iCloud Drive disabled.
   }
 
-  const found = candidates.filter(({ manager, path }) => manager.fileExists(path));
-  if (found.length > 1) {
-    throw new Error("本机和 iCloud 都有 bmw-linker。请把安装脚本放到你使用的 bmw-linker 所在位置。");
+  const scriptDirectory = module.filename.slice(0, module.filename.lastIndexOf("/"));
+  if (scriptDirectory) {
+    const manager = cloud && local.isFileStoredIniCloud(module.filename) ? cloud : local;
+    folders.unshift({ manager, path: scriptDirectory });
   }
+  const unique = new Map();
+  for (const folder of folders) {
+    const key = folder.path.replace(/^\/private(?=\/var\/)/, "").replace(/\/+$/, "");
+    if (!unique.has(key)) unique.set(key, folder);
+  }
+  return [...unique.values()];
+}
+
+function locateScript(name, folders) {
+  const found = folders
+    .map(({ manager, path }) => ({ manager, path: manager.joinPath(path, name + ".js") }))
+    .filter(({ manager, path }) =>
+      path !== module.filename && manager.fileExists(path) && !manager.isDirectory(path));
   if (found.length === 0) {
-    throw new Error("找不到名为 bmw-linker 的脚本。请确认原脚本已导入 Scriptable，且名称为 bmw-linker。");
+    throw new Error("找不到「" + name + "」。请输入 Scriptable 中显示的完整脚本名称。");
   }
-  return found[0];
+  if (found.length > 1) {
+    throw new Error("发现多份同名脚本「" + name + "」。请先给不同车辆的脚本设置不同名称。");
+  }
+  return { name, ...found[0] };
+}
+
+async function chooseScript() {
+  const folders = scriptFolders();
+  const helperNames = new Set(["bmw-linker-ha-setup", "bmw-linker-ha-bridge", "bmw-linker-ha-inline"]);
+  const names = new Set();
+  for (const { manager, path } of folders) {
+    let files;
+    try {
+      if (!manager.fileExists(path)) continue;
+      files = manager.listContents(path);
+    } catch {
+      continue;
+    }
+    for (const file of files) {
+      if (!/^bmw-linker.*\.js$/i.test(file)) continue;
+      const name = file.slice(0, -3);
+      const filePath = manager.joinPath(path, file);
+      if (
+        !helperNames.has(name.toLowerCase()) &&
+        filePath !== module.filename &&
+        !manager.isDirectory(filePath)
+      ) {
+        names.add(name);
+      }
+    }
+  }
+
+  const suggested = [...names].sort((left, right) => left.localeCompare(right));
+  const chooser = new Alert();
+  chooser.title = "选择要安装或恢复桥接的脚本";
+  for (const name of suggested) chooser.addAction(name);
+  chooser.addAction("手工输入脚本名");
+  chooser.addCancelAction("取消");
+  const action = await chooser.presentSheet();
+  if (action < 0) return null;
+  if (action < suggested.length) return locateScript(suggested[action], folders);
+
+  const prompt = new Alert();
+  prompt.title = "输入 Scriptable 脚本名称";
+  prompt.addTextField("例如 宝马 i4");
+  prompt.addAction("继续");
+  prompt.addCancelAction("取消");
+  if (await prompt.presentAlert() !== 0) return null;
+  const name = prompt.textFieldValue(0).trim().replace(/\.js$/i, "");
+  if (!name || /[/\\\u0000-\u001f]/.test(name) || helperNames.has(name.toLowerCase())) {
+    throw new Error("请输入 BMW 脚本名称，填写 Scriptable 列表里显示的名称即可。");
+  }
+  return locateScript(name, folders);
 }
 
 function addBridge(original) {
@@ -39,24 +98,33 @@ function addBridge(original) {
   if (/pushVehicleState|HA_WEBHOOK_URL|\[My BMW HA\]/.test(updated)) {
     throw new Error("检测到其他版本的桥接代码。安装器已保留原脚本，请先用未加桥接的 bmw-linker 运行安装。");
   }
-  if (updated.split(startup).length !== 2 || !updated.includes("async getAppViewOptions()")) {
+  const startups = [...updated.matchAll(/^[ \t]*await\s+new\s+Widget\s*\(\s*Script\.name\s*\(\s*\)\s*,\s*\{/gm)];
+  if (
+    startups.length !== 1 ||
+    !/\bclass\s+Widget\s+extends\s+BaseWidget\b/.test(updated) ||
+    !/\basync\s+getAppViewOptions\s*\(/.test(updated) ||
+    !/\basync\s+getData\s*\(/.test(updated)
+  ) {
     throw new Error("这个 bmw-linker 版本的入口与安装器不匹配，原脚本已保留。");
   }
 
   const lineEnding = updated.includes("\r\n") ? "\r\n" : "\n";
   const patch = bridgeCode.replace(/\n/g, lineEnding);
-  return updated.replace(startup, () => patch + lineEnding + startup);
+  const { index } = startups[0];
+  return updated.slice(0, index) + patch + lineEnding + updated.slice(index);
 }
 
 async function installBridge() {
-  const { manager, path } = findOriginalScript();
+  const script = await chooseScript();
+  if (!script) return;
+  const { manager, name, path } = script;
   if (manager.isFileStoredIniCloud(path)) await manager.downloadFileFromiCloud(path);
   const original = manager.readString(path);
   const updated = addBridge(original);
-  if (updated === original) return "已经装好。请打开 bmw-linker，在菜单中选择 Home Assistant Webhook。";
+  if (updated === original) return "「" + name + "」已安装桥接。";
 
   if (manager.readString(path) !== original) {
-    throw new Error("安装期间 bmw-linker 内容发生变化，请关闭编辑器后重试。");
+    throw new Error("安装期间所选脚本内容发生变化，请关闭编辑器后重试。");
   }
   try {
     manager.writeString(path, updated);
@@ -66,12 +134,12 @@ async function installBridge() {
       manager.writeString(path, original);
       if (manager.readString(path) !== original) throw new Error("恢复校验失败");
     } catch {
-      throw new Error("写入和自动恢复失败，请重新导入原来的 bmw-linker。");
+      throw new Error("写入和自动恢复失败，请重新导入原来的「" + name + "」。");
     }
     throw new Error("安装未完成，原脚本已恢复。");
   }
 
-  return "已更新原来的 bmw-linker。请返回脚本列表，运行 bmw-linker，在 Home Assistant Webhook 菜单中填写地址。";
+  return "「" + name + "」的桥接已就绪。请运行该脚本。首次安装时，在 Home Assistant Webhook 菜单设置地址；此前保存过的地址可继续使用。";
 }
 
 const result = new Alert();
@@ -82,5 +150,7 @@ try {
   result.title = "安装未完成";
   result.message = error.message;
 }
-result.addAction("确定");
-await result.presentAlert();
+if (result.message) {
+  result.addAction("确定");
+  await result.presentAlert();
+}

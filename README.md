@@ -21,14 +21,16 @@
 
 ## Scriptable 单脚本方式
 
-把发送功能加到你已登录的 `bmw-linker`。保留脚本名和原有小组件绑定，以后只需运行这一份脚本。
+把发送功能加到你已登录的 BMW 脚本。安装器保留所选脚本的名称和原有小组件绑定。
 
 1. 用 iPhone 打开 [bmw-linker-ha-setup.js](https://raw.githubusercontent.com/rayyume/bmw-linker-ha/main/bmw-linker-ha-setup.js)，全选并复制代码。
-2. 打开 Scriptable，点 **＋** 新建脚本，命名为 **bmw-linker-ha-setup**。粘贴整段代码，点 **▶** 运行一次。安装器会就地更新已有的 `bmw-linker`，支持未改动的原脚本和按说明接入过独立发送模块的脚本。
-3. 返回并运行 **bmw-linker**。在原菜单中点 **Home Assistant Webhook**，粘贴 HA 集成显示的完整 URL，再点**保存**。菜单会显示「已设置」。以后从同一入口修改地址，清空后保存即可停用推送。
-4. 预览车辆小组件。确认 HA 收到数据后，可以删除安装器和旧的独立发送脚本。
+2. 打开 Scriptable，点 **＋** 新建脚本，命名为 **bmw-linker-ha-setup**。粘贴整段代码，点 **▶** 运行。选择要安装的脚本。列表会显示以 `bmw-linker` 开头的脚本，同一入口也能**手工输入脚本名**。
+3. 返回并运行选中的 BMW 脚本。在原菜单中点 **Home Assistant Webhook**，粘贴 HA 集成显示的完整 URL，再点**保存**。菜单会显示「已设置」。以后从同一入口修改地址，清空后保存即可停用推送。
+4. 预览车辆小组件，确认 HA 收到车况。日常由 BMW 脚本负责显示和上报，保留 setup 供以后更新使用。
 
-Webhook 保存在 Scriptable 的钥匙串里，源代码和菜单列表均只保留配置逻辑或设置状态。HA 集成和原有 Webhook URL 可以继续使用。
+**原作者更新后**，重新运行 setup 并选择刚更新的脚本。安装器会重新注入 Webhook 菜单和上报代码，同名脚本继续使用钥匙串里原来保存的 URL。对已接入的脚本重复运行不会重复注入。
+
+**多辆车**使用不同的 Scriptable 脚本名，例如 `bmw-linker-i4` 和 `宝马 X5`。在 HA 里分别添加两辆车的集成条目，并在两个脚本中分别填写对应的 Webhook。地址按脚本名保存在 Scriptable 钥匙串里。
 
 <details>
 <summary>手动安装和排查</summary>

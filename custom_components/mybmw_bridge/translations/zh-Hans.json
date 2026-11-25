@@ -42,11 +42,56 @@
       "fuel_range_km": {"name": "宝马报告的燃油续航"},
       "electric_range_km": {"name": "纯电续航"},
       "odometer_km": {"name": "总里程"},
-      "reported_at": {"name": "车辆最后上报时间"}
+      "reported_at": {"name": "车辆最后上报时间"},
+      "fuel_liters": {"name": "剩余燃油"},
+      "charging_target_percent": {"name": "充电目标"},
+      "remaining_charging_minutes": {"name": "充电剩余时间"},
+      "location_accuracy": {"name": "定位精度"},
+      "check_control_count": {"name": "车况提醒数量"},
+      "latitude": {"name": "纬度"},
+      "longitude": {"name": "经度"},
+      "last_trip_fuel_consumption": {"name": "最近行程平均油耗"},
+      "monthly_fuel_consumption": {"name": "本月平均油耗"},
+      "last_trip_electric_consumption": {"name": "最近行程平均电耗"},
+      "monthly_electric_consumption": {"name": "本月平均电耗"},
+      "address": {"name": "车辆地址"},
+      "brand": {"name": "品牌"},
+      "model": {"name": "车型"},
+      "vin": {"name": "车辆识别码（VIN）"},
+      "license_plate": {"name": "车牌"},
+      "door_security_status": {"name": "宝马原始车锁状态"},
+      "charging_status": {"name": "充电状态"},
+      "consumption_summary": {"name": "能耗摘要"},
+      "vehicle_details": {"name": "车辆详情"},
+      "front_left_pressure": {"name": "左前胎压"},
+      "front_left_target_pressure": {"name": "左前目标胎压"},
+      "front_right_pressure": {"name": "右前胎压"},
+      "front_right_target_pressure": {"name": "右前目标胎压"},
+      "rear_left_pressure": {"name": "左后胎压"},
+      "rear_left_target_pressure": {"name": "左后目标胎压"},
+      "rear_right_pressure": {"name": "右后胎压"},
+      "rear_right_target_pressure": {"name": "右后目标胎压"}
     },
     "binary_sensor": {
       "door_security": {"name": "车锁状态"},
-      "stale_report": {"name": "车辆数据已过期"}
+      "stale_report": {"name": "车辆数据已过期"},
+      "charger_connected": {"name": "充电枪连接"},
+      "doors_open": {"name": "车门"},
+      "windows_open": {"name": "车窗"},
+      "hood_open": {"name": "引擎盖"},
+      "trunk_open": {"name": "后备箱"},
+      "sunroof_open": {"name": "天窗"},
+      "door_front_left_open": {"name": "左前车门"},
+      "window_front_left_open": {"name": "左前车窗"},
+      "door_front_right_open": {"name": "右前车门"},
+      "window_front_right_open": {"name": "右前车窗"},
+      "door_rear_left_open": {"name": "左后车门"},
+      "window_rear_left_open": {"name": "左后车窗"},
+      "door_rear_right_open": {"name": "右后车门"},
+      "window_rear_right_open": {"name": "右后车窗"}
+    },
+    "device_tracker": {
+      "position": {"name": "车辆位置"}
     }
   }
 }

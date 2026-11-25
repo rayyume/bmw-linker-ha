@@ -42,11 +42,56 @@
       "fuel_range_km": {"name": "Fuel range reported by BMW"},
       "electric_range_km": {"name": "Electric range"},
       "odometer_km": {"name": "Odometer"},
-      "reported_at": {"name": "Vehicle last reported"}
+      "reported_at": {"name": "Vehicle last reported"},
+      "fuel_liters": {"name": "Remaining fuel"},
+      "charging_target_percent": {"name": "Charging target"},
+      "remaining_charging_minutes": {"name": "Charging time remaining"},
+      "location_accuracy": {"name": "Location accuracy"},
+      "check_control_count": {"name": "Check Control message count"},
+      "latitude": {"name": "Latitude"},
+      "longitude": {"name": "Longitude"},
+      "last_trip_fuel_consumption": {"name": "Last trip average fuel consumption"},
+      "monthly_fuel_consumption": {"name": "Monthly average fuel consumption"},
+      "last_trip_electric_consumption": {"name": "Last trip average electric consumption"},
+      "monthly_electric_consumption": {"name": "Monthly average electric consumption"},
+      "address": {"name": "Vehicle address"},
+      "brand": {"name": "Brand"},
+      "model": {"name": "Model"},
+      "vin": {"name": "VIN"},
+      "license_plate": {"name": "License plate"},
+      "door_security_status": {"name": "BMW lock status"},
+      "charging_status": {"name": "Charging status"},
+      "consumption_summary": {"name": "Consumption summary"},
+      "vehicle_details": {"name": "Vehicle details"},
+      "front_left_pressure": {"name": "Front left tire pressure"},
+      "front_left_target_pressure": {"name": "Front left target tire pressure"},
+      "front_right_pressure": {"name": "Front right tire pressure"},
+      "front_right_target_pressure": {"name": "Front right target tire pressure"},
+      "rear_left_pressure": {"name": "Rear left tire pressure"},
+      "rear_left_target_pressure": {"name": "Rear left target tire pressure"},
+      "rear_right_pressure": {"name": "Rear right tire pressure"},
+      "rear_right_target_pressure": {"name": "Rear right target tire pressure"}
     },
     "binary_sensor": {
       "door_security": {"name": "Door lock status"},
-      "stale_report": {"name": "Vehicle data stale"}
+      "stale_report": {"name": "Vehicle data stale"},
+      "charger_connected": {"name": "Charging cable"},
+      "doors_open": {"name": "Doors"},
+      "windows_open": {"name": "Windows"},
+      "hood_open": {"name": "Hood"},
+      "trunk_open": {"name": "Trunk"},
+      "sunroof_open": {"name": "Sunroof"},
+      "door_front_left_open": {"name": "Front left door"},
+      "window_front_left_open": {"name": "Front left window"},
+      "door_front_right_open": {"name": "Front right door"},
+      "window_front_right_open": {"name": "Front right window"},
+      "door_rear_left_open": {"name": "Rear left door"},
+      "window_rear_left_open": {"name": "Rear left window"},
+      "door_rear_right_open": {"name": "Rear right door"},
+      "window_rear_right_open": {"name": "Rear right window"}
+    },
+    "device_tracker": {
+      "position": {"name": "Vehicle location"}
     }
   }
 }

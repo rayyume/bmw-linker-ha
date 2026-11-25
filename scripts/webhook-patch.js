@@ -1,28 +1,34 @@
-// Installed by bmw-linker-ha-setup before the widget starts.
+// BEGIN bmw-linker-ha bridge
 {
-  const pushVehicleState = async (snapshot, webhookUrl) => {
+  const privateFields = new Set([
+    "accesstoken", "refreshtoken", "idtoken", "token", "password", "encryptedpassword",
+    "authorization", "cookie", "cookies", "gcid", "accountid", "userid", "phonenumber",
+    "phone", "email", "otp", "otpcode", "clientsecret", "apikey", "privatekey",
+    "digitalkey", "credential", "credentials",
+  ]);
+
+  function vehicleFields(key, value) {
+    if (privateFields.has(key.toLowerCase().replace(/[^a-z]/g, ""))) return undefined;
+    if (typeof value === "string" &&
+      (/^data:/i.test(value) || /[?&](?:access_token|refresh_token|id_token|token|api_key|key)=/i.test(value))) {
+      return undefined;
+    }
+    return value;
+  }
+
+  const pushVehicleState = async (snapshot, trips, webhookUrl) => {
     if (!isHaWebhookUrl(webhookUrl)) {
       console.log("[My BMW HA] 请填写集成显示的完整 Webhook URL。");
       return;
     }
 
-    const rawTimestamp = snapshot?.lastUpdatedAt;
+    const { properties: state, black, ...vehicle } = snapshot;
+    const rawTimestamp = state.lastUpdatedAt;
     const reportedAt = rawTimestamp ? new Date(rawTimestamp) : null;
     if (!reportedAt || !Number.isFinite(reportedAt.getTime())) {
       console.log("[My BMW HA] 车辆数据缺少有效的上报时间。");
       return;
     }
-
-    const fuel = snapshot.combustionFuelLevel;
-    const electric = snapshot.electricChargingState;
-    const security = snapshot.doorsState?.combinedSecurityState;
-    const doorState = {
-      LOCKED: "LOCKED",
-      SECURED: "LOCKED",
-      UNLOCKED: "UNLOCKED",
-      SELECTIVE_LOCKED: "UNLOCKED",
-      PARTIALLY_LOCKED: "UNLOCKED",
-    }[security];
 
     try {
       const request = new Request(webhookUrl);
@@ -31,22 +37,19 @@
       request.timeoutInterval = 4;
       request.onRedirect = () => null;
       request.body = JSON.stringify({
-        version: 1,
+        version: 2,
         reported_at: reportedAt.toISOString(),
-        battery_percent: nonnegativeNumber(electric?.chargingLevelPercent),
-        fuel_percent: nonnegativeNumber(fuel?.remainingFuelPercent),
-        fuel_range_km: nonnegativeNumber(fuel?.range),
-        electric_range_km: nonnegativeNumber(electric?.range),
-        odometer_km: nonnegativeNumber(snapshot.currentMileage),
-        door_state: doorState,
-      });
+        vehicle,
+        state,
+        trips,
+      }, vehicleFields);
 
       const receipt = await request.loadJSON();
       if (request.response.statusCode !== 200) throw new Error();
       if (receipt?.mybmw_bridge === "updated") {
         console.log("[My BMW HA] 已更新车辆状态。");
       } else if (receipt?.mybmw_bridge === "unchanged") {
-        console.log("[My BMW HA] 已收到，车辆上报时间没有更新。");
+        console.log("[My BMW HA] 已收到，车辆数据没有更新。");
       } else {
         throw new Error();
       }
@@ -57,11 +60,6 @@
 
   function isHaWebhookUrl(value) {
     return /^https?:\/\/[^\s/?#@\\]+\/api\/webhook\/[a-f0-9]{64}$/.test(value);
-  }
-
-  function nonnegativeNumber(value) {
-    if (typeof value === "string" && value.trim() !== "") value = Number(value);
-    return Number.isFinite(value) && value >= 0 ? value : undefined;
   }
 
   const webhookKey = "bmw-linker-ha.webhook-url." + Script.name();
@@ -113,9 +111,29 @@
       const data = await super.getData(forceRefresh);
       if (!forceRefresh && data?.properties && !data.black) {
         const url = readWebhook();
-        if (url) await pushVehicleState(data.properties, url);
+        if (url) {
+          const trip = this.myBmwHaTrip;
+          await pushVehicleState(data, trip?.vin === data.vin ? trip?.report : undefined, url);
+        }
       }
       return data;
     }
+
+    async sustainability(...args) {
+      const vin = args[1];
+      const lastRefresh = this.keyGet("VIN_sustainabilityTime");
+      const result = await super.sustainability(...args);
+      // The upstream cache key has no VIN. Associate the report only when this call refreshes it.
+      if (typeof vin === "string" && this.keyGet("VIN_sustainabilityTime") !== lastRefresh) {
+        try {
+          const report = JSON.parse(this.keyGet("VIN_sustainabilityres"));
+          if (report?.status === "Success") this.myBmwHaTrip = { vin, report };
+        } catch {
+          // The upstream cache may be unavailable. Vehicle state can still be sent.
+        }
+      }
+      return result;
+    }
   };
 }
+// END bmw-linker-ha bridge

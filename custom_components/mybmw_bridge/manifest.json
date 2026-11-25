@@ -4,10 +4,10 @@
   "categories": ["vehicles_transport.cars_evs"],
   "codeowners": ["@rayyume"],
   "config_flow": true,
-  "dependencies": ["webhook"],
+  "dependencies": ["device_tracker", "webhook"],
   "documentation": "https://github.com/rayyume/bmw-linker-ha",
   "integration_type": "device",
   "iot_class": "local_push",
   "issue_tracker": "https://github.com/rayyume/bmw-linker-ha/issues",
-  "version": "0.2.2"
+  "version": "0.3.0"
 }

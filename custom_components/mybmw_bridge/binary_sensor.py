@@ -12,12 +12,43 @@ from homeassistant.helpers.event import async_track_point_in_utc_time
 from . import MyBmwBridgeConfigEntry
 from .const import STALE_AFTER
 from .entity import BridgeEntity
+from .telemetry import WHEELS
+
+_DEVICE_CLASSES = {
+    "charger_connected": BinarySensorDeviceClass.PLUG,
+    "doors_open": BinarySensorDeviceClass.DOOR,
+    "windows_open": BinarySensorDeviceClass.WINDOW,
+    "hood_open": BinarySensorDeviceClass.OPENING,
+    "trunk_open": BinarySensorDeviceClass.OPENING,
+    "sunroof_open": BinarySensorDeviceClass.WINDOW,
+    **{f"door_{wheel}_open": BinarySensorDeviceClass.DOOR for wheel in WHEELS},
+    **{f"window_{wheel}_open": BinarySensorDeviceClass.WINDOW for wheel in WHEELS},
+}
 
 
 async def async_setup_entry(
     hass: HomeAssistant, entry: MyBmwBridgeConfigEntry, async_add_entities: AddEntitiesCallback
 ) -> None:
-    async_add_entities([DoorSecurity(entry), StaleReport(entry)])
+    async_add_entities([
+        DoorSecurity(entry),
+        StaleReport(entry),
+        *(VehicleBinarySensor(entry, key, device_class) for key, device_class in _DEVICE_CLASSES.items()),
+    ])
+
+
+class VehicleBinarySensor(BridgeEntity, BinarySensorEntity):
+    def __init__(
+        self, entry: MyBmwBridgeConfigEntry, key: str, device_class: BinarySensorDeviceClass
+    ) -> None:
+        super().__init__(entry, key)
+        self._attr_translation_key = key
+        self._attr_device_class = device_class
+
+    @property
+    def is_on(self) -> bool | None:
+        snapshot = self.coordinator.data
+        value = snapshot.values.get(self._attr_translation_key) if snapshot else None
+        return value if type(value) is bool else None
 
 
 class DoorSecurity(BridgeEntity, BinarySensorEntity):

@@ -18,8 +18,8 @@ from .const import CONF_PUBLIC_URL, CONF_WEBHOOK_ID, DOMAIN
 from .snapshot import VehicleSnapshot
 
 _LOGGER = logging.getLogger(__name__)
-_PLATFORMS = (Platform.SENSOR, Platform.BINARY_SENSOR)
-_MAX_BODY_BYTES = 4096
+_PLATFORMS = (Platform.SENSOR, Platform.BINARY_SENSOR, Platform.DEVICE_TRACKER)
+_MAX_BODY_BYTES = 64 * 1024
 
 
 class VehicleCoordinator(DataUpdateCoordinator[VehicleSnapshot]):
@@ -70,8 +70,14 @@ class VehicleCoordinator(DataUpdateCoordinator[VehicleSnapshot]):
         async with self.lock:
             if not self.accepting_updates:
                 return web.json_response({"error": "bridge_unloading"}, status=503)
-            if self.data and snapshot.reported_at <= self.data.reported_at:
-                return web.json_response({"mybmw_bridge": "unchanged"})
+            if previous := self.data:
+                if snapshot.reported_at < previous.reported_at or (
+                    snapshot.reported_at == previous.reported_at and snapshot.version == 1
+                ):
+                    return web.json_response({"mybmw_bridge": "unchanged"})
+                snapshot = snapshot.with_cached_trips(previous)
+                if snapshot == previous:
+                    return web.json_response({"mybmw_bridge": "unchanged"})
             await self.store.async_save(snapshot.as_payload())
             self.async_set_updated_data(snapshot)
         return web.json_response({"mybmw_bridge": "updated"})

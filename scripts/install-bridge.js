@@ -55,16 +55,6 @@ async function installBridge() {
   const updated = addBridge(original);
   if (updated === original) return "已经装好。请打开 bmw-linker，在菜单中选择 Home Assistant Webhook。";
 
-  const local = FileManager.local();
-  const backups = local.joinPath(local.documentsDirectory(), "bmw-linker-ha-backups");
-  if (!local.fileExists(backups)) local.createDirectory(backups);
-  const backupName = "bmw-linker-" + new Date().toISOString().replace(/[:.]/g, "-") + ".js.bak";
-  const backup = local.joinPath(backups, backupName);
-  local.writeString(backup, original);
-  if (local.readString(backup) !== original) {
-    throw new Error("备份校验失败，原脚本已保留。");
-  }
-
   if (manager.readString(path) !== original) {
     throw new Error("安装期间 bmw-linker 内容发生变化，请关闭编辑器后重试。");
   }
@@ -76,7 +66,7 @@ async function installBridge() {
       manager.writeString(path, original);
       if (manager.readString(path) !== original) throw new Error("恢复校验失败");
     } catch {
-      throw new Error("写入和自动恢复失败。原代码保存在 bmw-linker-ha-backups/" + backupName + "。");
+      throw new Error("写入和自动恢复失败，请重新导入原来的 bmw-linker。");
     }
     throw new Error("安装未完成，原脚本已恢复。");
   }

@@ -4,6 +4,7 @@ const sourcePath = new URL("../bmw-linker-ha-bridge.js", import.meta.url);
 const outputPath = new URL("../bmw-linker-ha-inline.js", import.meta.url);
 const packagePath = new URL("../bmw-linker-ha-bridge.scriptable", import.meta.url);
 const installerPath = new URL("./install-bridge.js", import.meta.url);
+const installerSourcePath = new URL("../bmw-linker-ha-setup.js", import.meta.url);
 const installerPackagePath = new URL("../bmw-linker-ha-setup.scriptable", import.meta.url);
 const senderSignature = "module.exports.pushVehicleState = async (snapshot) => {";
 const source = readFileSync(sourcePath, "utf8");
@@ -89,12 +90,15 @@ const scriptablePackage = JSON.parse(readFileSync(packagePath, "utf8"));
 scriptablePackage.script = source;
 writeFileSync(packagePath, JSON.stringify(scriptablePackage, null, 2) + "\n");
 
-const installer = readFileSync(installerPath, "utf8");
+const installer = readFileSync(installerPath, "utf8")
+  .replace("/* generated bridge */ null", () => JSON.stringify(inline));
+writeFileSync(installerSourcePath, installer);
+
 const installerPackage = {
   always_run_in_app: true,
   icon: { color: "blue", glyph: "mobile-alt" },
   name: "bmw-linker-ha-setup",
-  script: installer.replace("/* generated bridge */ null", () => JSON.stringify(inline)),
+  script: installer,
   share_sheet_inputs: [],
 };
 writeFileSync(installerPackagePath, JSON.stringify(installerPackage, null, 2) + "\n");

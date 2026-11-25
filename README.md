@@ -19,7 +19,18 @@
 
 地址字段只填协议、主机和可选端口。Webhook 路径由集成生成，请像密码一样保管完整 URL。公网模式只接收 HTTPS POST，局域网模式支持 HTTP 或 HTTPS POST。
 
-## 添加独立的 Scriptable 发送脚本
+## Scriptable 单脚本方式
+
+把发送功能内嵌到你已登录的 `bmw-linker`，以后只需运行这一份脚本。安装好的 HA 集成和原有 Webhook URL 可以继续使用。
+
+1. 打开 [bmw-linker-ha-inline.js](bmw-linker-ha-inline.js)，复制整个代码块。
+2. 在 Scriptable 中编辑现有的 `bmw-linker`，找到 `render` 方法里的 `let data = await this.getData();`。在这行下面粘贴代码，保留原来的取数和显示逻辑。
+3. 把内嵌代码中 `HA_WEBHOOK_URL` 的占位值换成 HA 集成给出的完整地址。如果曾经加过 `importModule(...).pushVehicleState(...)` 的调用，把旧调用块删掉。
+4. 运行这个脚本并预览小组件。确认 HA 收到数据后，就可以从 Scriptable 移除独立的发送脚本。
+
+建议先在原脚本里完成测试并保留原名称，已有小组件可以继续指向它。若将合并后的脚本改名为 `bmw-linker-bridge`，请重新选择桌面小组件绑定的脚本。原脚本用脚本名区分部分本地设置，改名后可能需要重新登录或选车。
+
+## Scriptable 独立发送模块方式
 
 1. 在 iPhone 下载 [bmw-linker-ha-bridge.scriptable](https://github.com/rayyume/bmw-linker-ha/releases/latest/download/bmw-linker-ha-bridge.scriptable)，从“文件”用 Scriptable 打开或分享导入。也可以新建名为 `bmw-linker-ha-bridge` 的脚本，再粘贴 [bmw-linker-ha-bridge.js](bmw-linker-ha-bridge.js) 的内容。打开脚本，把 `HA_WEBHOOK_URL` 的占位值替换成 HA 显示的完整 URL。
 2. 打开已经能显示车辆的 `bmw-linker`。在 `render` 方法里找到 `let data = await this.getData();`，在该行**下面**插入以下调用。

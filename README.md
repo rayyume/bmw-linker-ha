@@ -29,6 +29,10 @@ type: custom:bmw-linker-ha-vehicle
 entity: sensor.my_bmw_vehicle_details
 ```
 
+![BMW X3 30i 在 Home Assistant 仪表盘中的卡片示例](docs/images/bmw-x3-ha-card.png)
+
+*BMW X3 30i 的自定义仪表盘布局示例。*
+
 新版桥接在原 BMW 小组件加载车图时会同步图片。升级后请用新版 setup 更新每个脚本，再预览一次 BMW 小组件。卡片也可填入自定义车型图地址，例如 `/local/bmw-x3.png`，这会优先显示指定图片。车况随 HA 已接收的实体状态更新，停车地址可打开车辆的定位详情。
 
 ## 安装 Home Assistant 集成

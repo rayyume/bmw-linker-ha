@@ -50,14 +50,20 @@ entity: sensor.my_bmw_vehicle_details
 
 ## 安装 Scriptable 桥接
 
-把发送功能加到你已登录的 BMW 脚本。安装器保留所选脚本的名称和原有小组件绑定。
+### 第一步 安装原版 `bmw-linker`
+
+在 iPhone 上从原作者没带伞的发布渠道获取 `bmw-linker`，导入 Scriptable，然后运行原脚本、登录 BMW 并确认小组件能显示车辆。已有可用原脚本的用户直接进入第二步。
+
+### 第二步 运行 **setup** 注入桥接
+
+安装器会把 Webhook 菜单和发送代码注入选中的 `bmw-linker`，保留它的名称和现有小组件绑定。
 
 1. 用 iPhone 下载 [bmw-linker-ha-setup.scriptable](https://github.com/rayyume/bmw-linker-ha/releases/latest/download/bmw-linker-ha-setup.scriptable)，保存到「文件」App。
 2. 在「文件」App 的下载项里找到这个 `.scriptable` 文件，长按后选 **分享 → Scriptable** 导入。
 3. 打开 Scriptable，运行 **bmw-linker-ha-setup**，选择要接入的脚本。列表会显示以 `bmw-linker` 开头的脚本，也能**手工输入脚本名**。
 4. 打开选中的 BMW 脚本。从原菜单点 **Home Assistant Webhook**，粘贴 HA 集成显示的完整 URL，再点**保存**。预览小组件，确认 HA 收到车况。保留 setup 供以后更新使用。
 
-**备用方式（复制粘贴）**：如果文件的分享菜单没有 Scriptable，打开 [bmw-linker-ha-setup.js](https://raw.githubusercontent.com/rayyume/bmw-linker-ha/main/bmw-linker-ha-setup.js) 并复制全部代码。在 Scriptable 点 **＋**，新建 **bmw-linker-ha-setup**，粘贴代码后从第 3 步继续。如果已有同名 setup，直接替换它的代码。
+**备用方式（复制粘贴）**。如果文件的分享菜单没有 Scriptable，打开 [bmw-linker-ha-setup.js](https://github.com/rayyume/bmw-linker-ha/releases/latest/download/bmw-linker-ha-setup.js) 并复制全部代码。在 Scriptable 点 **＋**，新建 **bmw-linker-ha-setup**，粘贴代码后运行它并选择原 BMW 脚本。如果已有同名 setup，直接替换它的代码。
 
 **升级桥接**：先在 HACS 更新集成并重启 HA，再导入新版 setup，对每个已接入的 BMW 脚本各运行一次安装器。已有 Webhook 地址会继续使用。预览 BMW 小组件即可发送新字段和车型图。
 

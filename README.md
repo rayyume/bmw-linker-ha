@@ -1,6 +1,6 @@
 # bmw-linker-ha
 
-把没带伞的中国区 `bmw-linker` 已经读到的车辆数据推送给 Home Assistant。原脚本负责 BMW 登录和刷新，HA 接收选中车辆的上报。
+把 `bmw-linker` 已经读到的车辆数据推送给 Home Assistant。原脚本负责 BMW 登录和刷新，HA 接收选中车辆的上报。
 
 ## 车辆实体
 
@@ -126,7 +126,7 @@ layout: compact
 
 ### 第一步 安装原版 `bmw-linker`
 
-在 iPhone 上从原作者没带伞的发布渠道获取 `bmw-linker`，导入 Scriptable，然后运行原脚本、登录 BMW 并确认小组件能显示车辆。已有可用原脚本的用户直接进入第二步。
+在发布页下载 [bmw-linker](https://github.com/rayyume/bmw-linker-ha/releases/latest/download/bmw-linker.scriptable)，导入 Scriptable，然后运行原脚本、登录 BMW 并确认小组件能显示车辆。已有可用原脚本的用户直接进入第二步。
 
 ### 第二步 运行 **setup** 注入桥接
 

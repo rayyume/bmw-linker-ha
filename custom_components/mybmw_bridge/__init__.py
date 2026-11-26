@@ -136,7 +136,7 @@ type MyBmwBridgeConfigEntry = ConfigEntry[VehicleCoordinator]
 async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:
     card = Path(__file__).with_name("bmw-linker-ha-card.js")
     await hass.http.async_register_static_paths([StaticPathConfig(_CARD_URL, str(card), False)])
-    frontend.add_extra_js_url(hass, f"{_CARD_URL}?v=0.4.0")
+    frontend.add_extra_js_url(hass, f"{_CARD_URL}?v=0.5.0")
     return True
 
 

@@ -9,5 +9,5 @@
   "integration_type": "device",
   "iot_class": "local_push",
   "issue_tracker": "https://github.com/rayyume/bmw-linker-ha/issues",
-  "version": "0.4.0"
+  "version": "0.5.0"
 }

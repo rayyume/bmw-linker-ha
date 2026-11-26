@@ -1,4 +1,5 @@
 const CARD_TYPE = "bmw-linker-ha-vehicle";
+const layouts = ["full", "compact"];
 const isVehicle = (state) => state?.attributes?.bmw_linker_vehicle === true;
 const isKnown = (state) => Boolean(state && !["unavailable", "unknown"].includes(state.state));
 const vehicleEntities = (hass) => Object.values(hass?.states ?? {}).filter(isVehicle);
@@ -6,6 +7,7 @@ const vehicleEntities = (hass) => Object.values(hass?.states ?? {}).filter(isVeh
 const words = {
   zh: {
     title: "BMW 车辆", select: "选择车辆", pick: "编辑卡片并选择车辆", waiting: "等待 Scriptable 上报",
+    layout: "卡片尺寸", full: "大尺寸", compact: "小尺寸", combinedRange: "燃油 / 纯电续航",
     missingPhoto: "等待车型图", mileage: "总里程", range: "续航", fuelRange: "燃油续航", electricRange: "纯电续航", fuel: "剩余燃油", battery: "电量",
     fuelUse: "最近油耗", electricUse: "最近电耗", tires: "胎压", frontLeft: "左前", frontRight: "右前",
     rearLeft: "左后", rearRight: "右后", locked: "已上锁", unlocked: "已解锁", lockUnknown: "车锁状态未知",
@@ -15,6 +17,7 @@ const words = {
   },
   en: {
     title: "BMW vehicle", select: "Choose vehicle", pick: "Choose a vehicle in the card editor",
+    layout: "Card size", full: "Large", compact: "Compact", combinedRange: "Fuel / EV range",
     waiting: "Waiting for a Scriptable report", missingPhoto: "Waiting for a vehicle photo",
     mileage: "Odometer", range: "Range", fuelRange: "Fuel range", electricRange: "Electric range", fuel: "Fuel remaining", battery: "Battery",
     fuelUse: "Last trip fuel", electricUse: "Last trip electricity", tires: "Tire pressure", frontLeft: "Front left",
@@ -118,6 +121,26 @@ layout.innerHTML = `
     button.address:hover { text-decoration: underline; }
     button.address:focus-visible { outline: 2px solid var(--primary-color, #1470b8); outline-offset: 3px; border-radius: 2px; }
     .empty { padding: 15px 20px; font-size: 14px; }
+    :host([compact]) .hero { background: linear-gradient(145deg, #152538, #29435c); }
+    :host([compact]) .heading { padding: 11px 14px 0; gap: 6px; align-items: center; }
+    :host([compact]) .heading h2 { font-size: clamp(16px, 5.3cqw, 24px); }
+    :host([compact]) .plate { margin-top: 3px; font-size: 11px; }
+    :host([compact]) .lock { gap: 3px; padding: 3px 6px; font-size: 10px; white-space: nowrap; }
+    :host([compact]) ha-icon { --mdc-icon-size: 13px; }
+    :host([compact]) .visual { display: flex; align-items: center; gap: 8px; min-height: 105px; padding: 6px 14px; }
+    :host([compact]) .metrics { flex: 1.4; min-width: 0; gap: 7px 6px; }
+    :host([compact]) .metric span { color: #c4d5e7; font-size: 10px; }
+    :host([compact]) .metric strong { font-size: clamp(11px, 3.65cqw, 16px); }
+    :host([compact]) .photo { flex: 1; min-width: 0; min-height: 66px; }
+    :host([compact]) .photo img { height: clamp(76px, 27cqw, 120px); max-width: 100%; padding: 0; aspect-ratio: auto; }
+    :host([compact]) .missing-photo { font-size: 10px; text-align: center; margin: 0; }
+    :host([compact]) footer { padding: 6px 14px 8px; gap: 4px; background: #24384d; color: #e9f1f9; border-color: #ffffff26; font-size: 11px; }
+    :host([compact]) .timestamp { color: #c4d5e7; }
+    :host([compact]) .stale, :host([compact]) .openings[data-state="alert"] ha-icon { color: #ffd399; }
+    :host([compact]) .openings[data-state="good"] ha-icon { color: #9de7c4; }
+    :host([compact]) .address { max-width: 100%; min-width: 0; color: #c4d5e7; }
+    :host([compact]) .address span { display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    :host([compact]) button.address { color: #a9e5ff; }
     @container (max-width: 335px) {
       .heading, .body, footer { padding-left: 13px; padding-right: 13px; }
       .pressures { grid-template-columns: repeat(2,minmax(0,1fr)); }
@@ -129,7 +152,9 @@ layout.innerHTML = `
         <div><h2 id="title"></h2><p class="plate" id="plate" hidden></p></div>
         <div class="lock" id="lock" hidden><ha-icon></ha-icon><span></span></div>
       </header>
-      <figure class="photo" id="photo"><img hidden alt=""><span class="missing-photo"></span></figure>
+      <div class="visual">
+        <figure class="photo" id="photo"><img hidden alt=""><span class="missing-photo"></span></figure>
+      </div>
     </section>
     <div class="body" id="body" hidden>
       <div class="metrics"></div>
@@ -189,7 +214,8 @@ class BmwLinkerVehicleCard extends HTMLElement {
     this.parts = {
       title: root.querySelector("#title"), plate: root.querySelector("#plate"), lock: root.querySelector("#lock"),
       photo: root.querySelector("img"), photoPlaceholder: root.querySelector(".missing-photo"),
-      body: root.querySelector("#body"), empty: root.querySelector("#empty"), metrics: root.querySelector(".metrics"),
+      body: root.querySelector("#body"), visual: root.querySelector(".visual"),
+      empty: root.querySelector("#empty"), metrics: root.querySelector(".metrics"),
       tires: root.querySelector(".tires"), tireHeading: root.querySelector("h3"), pressures: root.querySelector(".pressures"),
       footer: root.querySelector("footer"), openings: root.querySelector(".openings"), timestamp: root.querySelector("time"),
       stale: root.querySelector(".stale"), map: root.querySelector("button.address"), address: root.querySelector("div.address"),
@@ -220,7 +246,13 @@ class BmwLinkerVehicleCard extends HTMLElement {
 
   setConfig(config) {
     if (config.entity && typeof config.entity !== "string") throw new Error("Expected a vehicle details entity");
+    if (config.layout != null && !layouts.includes(config.layout)) throw new Error("Expected full or compact card layout");
     this.config = config;
+    const compact = config.layout === "compact";
+    this.toggleAttribute("compact", compact);
+    const { visual, body, metrics } = this.parts;
+    const metricsContainer = compact ? visual : body;
+    if (metrics.parentElement !== metricsContainer) metricsContainer.prepend(metrics);
     this.previous = null;
     this.render();
   }
@@ -231,13 +263,14 @@ class BmwLinkerVehicleCard extends HTMLElement {
   }
 
   getCardSize() {
-    return 7;
+    return this.config?.layout === "compact" ? 4 : 7;
   }
 
   render() {
     const hass = this.hassData;
     if (!this.config || !hass) return;
-    const { entity, image } = this.config;
+    const { entity, image, layout: mode } = this.config;
+    const compact = mode === "compact";
     const candidate = hass.states[entity];
     const details = isVehicle(candidate) ? candidate : undefined;
     const photo = details && relatedEntity(hass, entity, "image");
@@ -254,7 +287,8 @@ class BmwLinkerVehicleCard extends HTMLElement {
     parts.title.textContent = data.display_name || [data.brand, data.model].filter(Boolean).join(" ") || labels.title;
     parts.plate.textContent = data.display_plate || data.license_plate || "";
     parts.plate.hidden = !parts.plate.textContent;
-    parts.body.hidden = parts.footer.hidden = !isKnown(details);
+    parts.body.hidden = compact || !isKnown(details);
+    parts.metrics.hidden = parts.footer.hidden = !isKnown(details);
     parts.empty.hidden = isKnown(details);
     parts.empty.textContent = entity ? labels.waiting : labels.pick;
     parts.lock.hidden = !isKnown(details);
@@ -281,9 +315,12 @@ class BmwLinkerVehicleCard extends HTMLElement {
     const electricUse = formatConsumption(data.last_trip_electric_consumption, data.monthly_electric_consumption, "kWh/100 km", locale);
     const fuelRange = formatUnit(data.fuel_range_km, "km", locale);
     const electricRange = formatUnit(data.electric_range_km, "km", locale);
-    const ranges = fuelRange && electricRange
-      ? [[labels.fuelRange, fuelRange], [labels.electricRange, electricRange]]
-      : [[labels.range, fuelRange || electricRange]];
+    let ranges = [[labels.range, fuelRange || electricRange]];
+    if (fuelRange && electricRange) {
+      ranges = compact
+        ? [[labels.combinedRange, `${fuelRange} / ${electricRange}`]]
+        : [[labels.fuelRange, fuelRange], [labels.electricRange, electricRange]];
+    }
     let fuelLiters = formatUnit(data.fuel_liters, "L", locale);
     if (!fuelLiters && typeof data.fuel_tank_liters === "number" && typeof data.fuel_percent === "number") {
       fuelLiters = "≈" + formatUnit(data.fuel_tank_liters * data.fuel_percent / 100, "L", locale);
@@ -296,8 +333,9 @@ class BmwLinkerVehicleCard extends HTMLElement {
       [labels.battery, formatUnit(data.battery_percent, "%", locale)],
       [labels.fuelUse, fuelUse || (!electricUse && data.consumption_summary?.startsWith("油耗 ") ? data.consumption_summary.slice(3) : "")],
       [labels.electricUse, electricUse || (!fuelUse && data.consumption_summary?.startsWith("电耗 ") ? data.consumption_summary.slice(3) : "")],
-    ];
-    parts.metrics.replaceChildren(...metrics.filter(([, value]) => value).map(([label, value]) => {
+    ].filter(([, value]) => value);
+    const readings = compact ? metrics.slice(0, 4) : metrics;
+    parts.metrics.replaceChildren(...readings.map(([label, value]) => {
       const metric = document.createElement("div");
       const caption = document.createElement("span");
       const reading = document.createElement("strong");
@@ -308,7 +346,7 @@ class BmwLinkerVehicleCard extends HTMLElement {
       return metric;
     }));
 
-    const pressures = Object.entries(tireKeys).filter(([key]) => typeof data[key + "_pressure"] === "number");
+    const pressures = compact ? [] : Object.entries(tireKeys).filter(([key]) => typeof data[key + "_pressure"] === "number");
     parts.tires.hidden = !pressures.length;
     parts.tireHeading.textContent = labels.tires + " · bar";
     parts.pressures.replaceChildren(...pressures.map(([key, position]) => {
@@ -340,6 +378,8 @@ class BmwLinkerVehicleCard extends HTMLElement {
     parts.address.hidden = Boolean(this.trackerId) || !data.address;
     parts.map.querySelector("span").textContent = data.address || labels.location;
     parts.address.querySelector("span").textContent = data.address || "";
+    parts.map.title = data.address || labels.location;
+    parts.address.title = data.address || "";
   }
 }
 
@@ -352,12 +392,15 @@ class BmwLinkerVehicleEditor extends HTMLElement {
         label { display: grid; gap: 6px; margin: 12px 0; color: var(--primary-text-color); }
         select, input { font: inherit; min-width: 0; width: 100%; box-sizing: border-box; color: var(--primary-text-color); background: var(--card-background-color); padding: 9px; border: 1px solid var(--divider-color); border-radius: 4px; }
       </style>
-      <label><span></span><select></select></label>
+      <label><span></span><select id="vehicle"></select></label>
+      <label><span></span><select id="layout"></select></label>
       <label><span></span><input type="text" spellcheck="false" placeholder="/local/bmw-x3.png"></label>
     `;
-    this.select = this.shadowRoot.querySelector("select");
+    this.select = this.shadowRoot.querySelector("#vehicle");
+    this.layoutSelect = this.shadowRoot.querySelector("#layout");
     this.image = this.shadowRoot.querySelector("input");
     this.select.addEventListener("change", () => this.save());
+    this.layoutSelect.addEventListener("change", () => this.save());
     this.image.addEventListener("change", () => this.save());
     this.render();
   }
@@ -369,14 +412,15 @@ class BmwLinkerVehicleEditor extends HTMLElement {
 
   set hass(hass) {
     this.hassData = hass;
-    if (this.select !== this.shadowRoot?.activeElement && this.image !== this.shadowRoot?.activeElement) this.render();
+    if (![this.select, this.layoutSelect, this.image].includes(this.shadowRoot?.activeElement)) this.render();
   }
 
   render() {
     if (!this.select || !this.config || !this.hassData) return;
     const labels = textFor(this.hassData);
-    const [selectLabel, imageLabel] = this.shadowRoot.querySelectorAll("label span");
+    const [selectLabel, layoutLabel, imageLabel] = this.shadowRoot.querySelectorAll("label span");
     selectLabel.textContent = labels.select;
+    layoutLabel.textContent = labels.layout;
     imageLabel.textContent = labels.image;
     const options = vehicleEntities(this.hassData).map((state) => [state.attributes.friendly_name || state.entity_id, state.entity_id]);
     if (this.config.entity && !options.some(([, id]) => id === this.config.entity)) {
@@ -384,11 +428,15 @@ class BmwLinkerVehicleEditor extends HTMLElement {
     }
     this.select.replaceChildren(new Option(labels.select, ""), ...options.map(([label, id]) => new Option(label, id)));
     this.select.value = this.config.entity || "";
+    this.layoutSelect.replaceChildren(...layouts.map((mode) => new Option(labels[mode], mode)));
+    this.layoutSelect.value = this.config.layout ?? "full";
     this.image.value = this.config.image || "";
   }
 
   save() {
     const config = { ...this.config, entity: this.select.value };
+    if (this.layoutSelect.value === "compact") config.layout = "compact";
+    else delete config.layout;
     const image = this.image.value.trim();
     if (image) config.image = image;
     else delete config.image;
@@ -403,6 +451,6 @@ if (!customElements.get(CARD_TYPE)) {
   customElements.define("bmw-linker-ha-vehicle-editor", BmwLinkerVehicleEditor);
   window.customCards = window.customCards || [];
   window.customCards.push({
-    type: CARD_TYPE, name: "BMW Linker Vehicle", description: "Live BMW vehicle status, tire pressures and parking location",
+    type: CARD_TYPE, name: "BMW Linker Vehicle", description: "BMW vehicle status and parking location in large or compact layouts",
   });
 }
